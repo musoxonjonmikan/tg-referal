@@ -12,15 +12,15 @@ const CHANNELS = {
     name: '@vaelux',
   },
   multilevel: {
-    id: -1003980438262,
+    id: -1003947616006,
     username: 'vaelux_multilevel',
-    name: 'Multilevel course',
+    name: 'Multilevel kursga qo\'shilish',
     joinLink: 'https://t.me/+WuxE-3AVX_VmOGY6',
   },
   math: {
-    id: -1003702939239,
+    id: -1003975469421,
     username: 'vaelux_math',
-    name: 'Math materials',
+    name: 'Matematika materiallariga qo\'shilish',
     joinLink: 'https://t.me/+U3Re7CPYy7U2NmRi',
   },
 };
@@ -80,28 +80,29 @@ export function setupBotHandlers(bot) {
         }
       }
 
-      // Send welcome message
+      // Send welcome message with join request info
       await ctx.reply(
-        `👋 Assalamu alaykum, ${firstName}!\n\n🎉 Konkursimizga xush kelibsiz!\n\n📱 Quyidagi kanallarga a'zo bo\'ling va mukofotlarni yuting!`,
+        `👋 Assalamu alaykum, ${firstName}!\n\n🎉 Konkursimizga xush kelibsiz!\n\n📱 Quyidagi kanallarga <b>QO'SHILISH UCHUN YUBORIM</b> jo'nating va keyin tekshiring!`,
         {
+          parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
               [
                 {
-                  text: '📢 @vaelux kanalini kuzating',
+                  text: '📢 @vaelux (avtomatik kirish)',
                   url: 'https://t.me/vaelux',
                 },
               ],
               [
                 {
-                  text: '📚 Multilevel kursga qo\'shilish',
-                  url: CHANNELS.multilevel.joinLink,
+                  text: '📚 Multilevel kursga YUBORIM',
+                  url: 'https://t.me/+WuxE-3AVX_VmOGY6',
                 },
               ],
               [
                 {
-                  text: '📐 Matematika materiallariga qo\'shilish',
-                  url: CHANNELS.math.joinLink,
+                  text: '📐 Matematika YUBORIM',
+                  url: 'https://t.me/+U3Re7CPYy7U2NmRi',
                 },
               ],
               [
@@ -122,6 +123,49 @@ export function setupBotHandlers(bot) {
     }
   });
 
+  // Handle chat join requests (when user sends join request)
+  bot.on('chat_join_request', async (ctx) => {
+    try {
+      const userId = ctx.from.id;
+      const chatId = ctx.chatJoinRequest.chat.id;
+
+      console.log(`📝 User ${userId} sent join request to channel ${chatId}`);
+
+      // Auto-approve join request
+      await ctx.approveChatJoinRequest(userId);
+      console.log(`✅ Auto-approved join request for user ${userId} to channel ${chatId}`);
+
+      // Update user record
+      let user = await User.findOne({ userId });
+      if (!user) {
+        user = new User({
+          userId,
+          firstName: ctx.from.first_name || 'Do\'stim',
+          username: ctx.from.username,
+        });
+      }
+
+      // Mark which channel they joined
+      if (chatId === CHANNELS.vaelux.id) {
+        if (!user.channelsJoined) user.channelsJoined = {};
+        user.channelsJoined.channel1 = true;
+        console.log(`✅ User ${userId} marked as joined @vaelux`);
+      } else if (chatId === CHANNELS.multilevel.id) {
+        if (!user.channelsJoined) user.channelsJoined = {};
+        user.channelsJoined.channel2 = true;
+        console.log(`✅ User ${userId} marked as joined Multilevel`);
+      } else if (chatId === CHANNELS.math.id) {
+        if (!user.channelsJoined) user.channelsJoined = {};
+        user.channelsJoined.channel3 = true;
+        console.log(`✅ User ${userId} marked as joined Math`);
+      }
+
+      await user.save();
+    } catch (error) {
+      console.error('Chat join request error:', error);
+    }
+  });
+
   // Check subscription
   bot.action('check_subscription', async (ctx) => {
     try {
@@ -137,7 +181,7 @@ export function setupBotHandlers(bot) {
         await user.save();
       }
 
-      // Check all channels
+      // Check all channels for actual membership
       const checks = await Promise.all([
         checkUserInChannel(ctx.telegram, userId, CHANNELS.vaelux.id),
         checkUserInChannel(ctx.telegram, userId, CHANNELS.multilevel.id),
@@ -161,7 +205,7 @@ export function setupBotHandlers(bot) {
 
         await ctx.answerCbQuery('✅ Barcha kanallar tekshirildi!', false);
         await ctx.editMessageText(
-          `🎊 Tabriklaymiz! Siz barcha kanalga a'zo bo\'ldingiz!\n\n👥 Endi o\'z referral havolangizni ulashing va do\'stlarni taklif qiling:\n\n🔗 <code>${referralLink}</code>\n\n<i>Havola nusxalansin!</i>`,
+          `🎊 Tabriklaymiz! Siz barcha kanalga a'zo bo\'ldingiz!\n\n👥 Endi o\'z referral havolangizni ulashing va do\'stlarni taklif qiling:\n\n🔗 <code>${referralLink}</code>\n\n<i>Havolani nusxalang va do'stlaringizga yuboring!</i>`,
           {
             parse_mode: 'HTML',
             reply_markup: {
@@ -208,13 +252,13 @@ export function setupBotHandlers(bot) {
                 [
                   {
                     text: '📚 Multilevel kurs',
-                    url: CHANNELS.multilevel.joinLink,
+                    url: 'https://t.me/+WuxE-3AVX_VmOGY6',
                   },
                 ],
                 [
                   {
                     text: '📐 Matematika',
-                    url: CHANNELS.math.joinLink,
+                    url: 'https://t.me/+U3Re7CPYy7U2NmRi',
                   },
                 ],
                 [
