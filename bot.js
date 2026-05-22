@@ -83,38 +83,80 @@ export function setupBotHandlers(bot) {
         }
       }
 
+      // Check which channels user is already in
+      const checks = await Promise.all([
+        checkUserInChannel(ctx.telegram, userId, CHANNELS.vaelux.id),
+        checkUserInChannel(ctx.telegram, userId, CHANNELS.multilevel.id),
+        checkUserInChannel(ctx.telegram, userId, CHANNELS.math.id),
+      ]);
+
+      const [inVaelux, inMultilevel, inMath] = checks;
+
+      // Build keyboard based on which channels user has joined
+      const keyboard = [];
+
+      if (!inVaelux) {
+        keyboard.push([
+          {
+            text: '📢 @vaelux kanaliga qoshilish',
+            url: 'https://t.me/vaelux',
+          },
+        ]);
+      } else {
+        keyboard.push([
+          {
+            text: '✅ @vaelux (azo bo\'ldingiz)',
+            callback_data: 'already_joined_vaelux',
+          },
+        ]);
+      }
+
+      if (!inMultilevel) {
+        keyboard.push([
+          {
+            text: '📚 Multilevel kursga YUBORIM',
+            url: 'https://t.me/+WuxE-3AVX_VmOGY6',
+          },
+        ]);
+      } else {
+        keyboard.push([
+          {
+            text: '✅ Multilevel (azo bo\'ldingiz)',
+            callback_data: 'already_joined_multilevel',
+          },
+        ]);
+      }
+
+      if (!inMath) {
+        keyboard.push([
+          {
+            text: '📐 Matematika YUBORIM',
+            url: 'https://t.me/+U3Re7CPYy7U2NmRi',
+          },
+        ]);
+      } else {
+        keyboard.push([
+          {
+            text: '✅ Matematika (azo bo\'ldingiz)',
+            callback_data: 'already_joined_math',
+          },
+        ]);
+      }
+
+      keyboard.push([
+        {
+          text: '✅ Obuna tekshirish',
+          callback_data: 'check_subscription',
+        },
+      ]);
+
       // Send welcome message
       await ctx.reply(
         `👋 Assalamu alaykum, ${firstName}!\n\n🎉 Konkursimizga xush kelibsiz!\n\n📱 Quyidagi kanallarga qo'shilish:`,
         {
           parse_mode: 'HTML',
           reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: '📢 @vaelux kanaliga qoshilish',
-                  url: 'https://t.me/vaelux',
-                },
-              ],
-              [
-                {
-                  text: '📚 Multilevel kursga YUBORIM',
-                  url: 'https://t.me/+WuxE-3AVX_VmOGY6',
-                },
-              ],
-              [
-                {
-                  text: '📐 Matematika YUBORIM',
-                  url: 'https://t.me/+U3Re7CPYy7U2NmRi',
-                },
-              ],
-              [
-                {
-                  text: '✅ Obuna tekshirish',
-                  callback_data: 'check_subscription',
-                },
-              ],
-            ],
+            inline_keyboard: keyboard,
           },
         }
       );
@@ -124,6 +166,19 @@ export function setupBotHandlers(bot) {
         '❌ Xatolik yuz berdi. Iltimos, qayta urinib ko\'ring.'
       );
     }
+  });
+
+  // Handle already joined callbacks (do nothing, just close)
+  bot.action('already_joined_vaelux', async (ctx) => {
+    await ctx.answerCbQuery('✅ Siz allaqachon @vaelux kanaliga a\'zo bo\'ldingiz!', false);
+  });
+
+  bot.action('already_joined_multilevel', async (ctx) => {
+    await ctx.answerCbQuery('✅ Siz allaqachon Multilevel kursiga a\'zo bo\'ldingiz!', false);
+  });
+
+  bot.action('already_joined_math', async (ctx) => {
+    await ctx.answerCbQuery('✅ Siz allaqachon Matematika kanaliga a\'zo bo\'ldingiz!', false);
   });
 
   // Handle chat join requests (ONLY for channels that require approval)
