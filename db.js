@@ -49,24 +49,28 @@ export async function connectDB() {
   try {
     const mongoUri = process.env.MONGODB_URI;
     
-    console.log('🔍 DEBUG: MONGODB_URI value:', mongoUri ? '✅ Exists' : '❌ Undefined');
-    console.log('🔍 DEBUG: All env vars:', Object.keys(process.env).filter(k => k.includes('MONGO') || k.includes('DB')));
-    
     if (!mongoUri) {
-      throw new Error('❌ MONGODB_URI is not set in environment variables');
+      console.error('❌ ERROR: MONGODB_URI environment variable is not set!');
+      console.error('❌ Please add MONGODB_URI to your deployment environment variables.');
+      console.error('❌ Format: mongodb+srv://username:password@cluster.mongodb.net/database_name');
+      process.exit(1);
     }
 
     console.log('🔌 Connecting to MongoDB...');
+    console.log('🔌 Connection string starts with:', mongoUri.substring(0, 30) + '...');
     
     await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       retryWrites: true,
       w: 'majority',
     });
     
-    console.log('✅ MongoDB connected successfully');
+    console.log('✅ MongoDB connected successfully!');
+    return true;
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
+    console.error('❌ Please check your MONGODB_URI environment variable');
+    console.error('❌ Error details:', error);
     process.exit(1);
   }
 }
