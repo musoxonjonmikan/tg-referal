@@ -1,7 +1,4 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const userSchema = new mongoose.Schema(
   {
@@ -51,6 +48,9 @@ export const User = mongoose.model('User', userSchema);
 export async function connectDB() {
   try {
     const mongoUri = process.env.MONGODB_URI;
+    
+    console.log('🔍 DEBUG: MONGODB_URI value:', mongoUri ? '✅ Exists' : '❌ Undefined');
+    console.log('🔍 DEBUG: All env vars:', Object.keys(process.env).filter(k => k.includes('MONGO') || k.includes('DB')));
     
     if (!mongoUri) {
       throw new Error('❌ MONGODB_URI is not set in environment variables');
