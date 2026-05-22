@@ -10,18 +10,21 @@ const CHANNELS = {
     id: -1001860340485,
     username: 'vaelux',
     name: '@vaelux',
+    requiresApproval: false, // Auto-join, no approval needed
   },
   multilevel: {
     id: -1003947616006,
     username: 'vaelux_multilevel',
     name: 'Multilevel kursga qo\'shilish',
     joinLink: 'https://t.me/+WuxE-3AVX_VmOGY6',
+    requiresApproval: true, // Requires join request approval
   },
   math: {
     id: -1003975469421,
     username: 'vaelux_math',
     name: 'Matematika materiallariga qo\'shilish',
     joinLink: 'https://t.me/+U3Re7CPYy7U2NmRi',
+    requiresApproval: true, // Requires join request approval
   },
 };
 
@@ -80,16 +83,16 @@ export function setupBotHandlers(bot) {
         }
       }
 
-      // Send welcome message with join request info
+      // Send welcome message
       await ctx.reply(
-        `👋 Assalamu alaykum, ${firstName}!\n\n🎉 Konkursimizga xush kelibsiz!\n\n📱 Quyidagi kanallarga <b>QO'SHILISH UCHUN YUBORIM</b> jo'nating va keyin tekshiring!`,
+        `👋 Assalamu alaykum, ${firstName}!\n\n🎉 Konkursimizga xush kelibsiz!\n\n📱 Quyidagi kanallarga qo'shilish:`,
         {
           parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
               [
                 {
-                  text: '📢 @vaelux (avtomatik kirish)',
+                  text: '📢 @vaelux kanaliga qoshilish',
                   url: 'https://t.me/vaelux',
                 },
               ],
@@ -123,7 +126,7 @@ export function setupBotHandlers(bot) {
     }
   });
 
-  // Handle chat join requests (when user sends join request)
+  // Handle chat join requests (ONLY for channels that require approval)
   bot.on('chat_join_request', async (ctx) => {
     try {
       const userId = ctx.from.id;
@@ -131,36 +134,35 @@ export function setupBotHandlers(bot) {
 
       console.log(`📝 User ${userId} sent join request to channel ${chatId}`);
 
-      // Auto-approve join request
-      await ctx.approveChatJoinRequest(userId);
-      console.log(`✅ Auto-approved join request for user ${userId} to channel ${chatId}`);
+      // Only auto-approve for multilevel and math channels
+      if (chatId === CHANNELS.multilevel.id || chatId === CHANNELS.math.id) {
+        // Auto-approve join request
+        await ctx.approveChatJoinRequest(userId);
+        console.log(`✅ Auto-approved join request for user ${userId} to channel ${chatId}`);
 
-      // Update user record
-      let user = await User.findOne({ userId });
-      if (!user) {
-        user = new User({
-          userId,
-          firstName: ctx.from.first_name || 'Do\'stim',
-          username: ctx.from.username,
-        });
+        // Update user record
+        let user = await User.findOne({ userId });
+        if (!user) {
+          user = new User({
+            userId,
+            firstName: ctx.from.first_name || 'Do\'stim',
+            username: ctx.from.username,
+          });
+        }
+
+        // Mark which channel they joined
+        if (chatId === CHANNELS.multilevel.id) {
+          if (!user.channelsJoined) user.channelsJoined = {};
+          user.channelsJoined.channel2 = true;
+          console.log(`✅ User ${userId} marked as joined Multilevel`);
+        } else if (chatId === CHANNELS.math.id) {
+          if (!user.channelsJoined) user.channelsJoined = {};
+          user.channelsJoined.channel3 = true;
+          console.log(`✅ User ${userId} marked as joined Math`);
+        }
+
+        await user.save();
       }
-
-      // Mark which channel they joined
-      if (chatId === CHANNELS.vaelux.id) {
-        if (!user.channelsJoined) user.channelsJoined = {};
-        user.channelsJoined.channel1 = true;
-        console.log(`✅ User ${userId} marked as joined @vaelux`);
-      } else if (chatId === CHANNELS.multilevel.id) {
-        if (!user.channelsJoined) user.channelsJoined = {};
-        user.channelsJoined.channel2 = true;
-        console.log(`✅ User ${userId} marked as joined Multilevel`);
-      } else if (chatId === CHANNELS.math.id) {
-        if (!user.channelsJoined) user.channelsJoined = {};
-        user.channelsJoined.channel3 = true;
-        console.log(`✅ User ${userId} marked as joined Math`);
-      }
-
-      await user.save();
     } catch (error) {
       console.error('Chat join request error:', error);
     }
@@ -181,7 +183,7 @@ export function setupBotHandlers(bot) {
         await user.save();
       }
 
-      // Check all channels for actual membership
+      // Check all channels for actual membership (no join requests, just check if user is IN the channel)
       const checks = await Promise.all([
         checkUserInChannel(ctx.telegram, userId, CHANNELS.vaelux.id),
         checkUserInChannel(ctx.telegram, userId, CHANNELS.multilevel.id),
@@ -205,7 +207,7 @@ export function setupBotHandlers(bot) {
 
         await ctx.answerCbQuery('✅ Barcha kanallar tekshirildi!', false);
         await ctx.editMessageText(
-          `🎊 Tabriklaymiz! Siz barcha kanalga a'zo bo\'ldingiz!\n\n👥 Endi o\'z referral havolangizni ulashing va do\'stlarni taklif qiling:\n\n🔗 <code>${referralLink}</code>\n\n<i>Havolani nusxalang va do'stlaringizga yuboring!</i>`,
+          `🎊 Tabriklaymiz! Siz barcha kanalga a'zo bo\'ldingiz!\n\n👥 Endi o\'z referral havolangizni ulashing va do\'stlarni taklif qiling:\n\n🔗 <code>${referralLink}</code>\n\n<i>Havola nusxalang va do'stlaringizga yuboring!</i>`,
           {
             parse_mode: 'HTML',
             reply_markup: {
@@ -674,7 +676,7 @@ export function setupBotHandlers(bot) {
   });
 }
 
-// Helper function to check user in channel
+// Helper function to check user in channel (just checks if user is already member)
 async function checkUserInChannel(telegram, userId, channelId) {
   try {
     const member = await telegram.getChatMember(channelId, userId);
