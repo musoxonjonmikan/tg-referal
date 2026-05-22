@@ -1,4 +1,7 @@
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const userSchema = new mongoose.Schema(
   {
@@ -47,17 +50,32 @@ export const User = mongoose.model('User', userSchema);
 
 export async function connectDB() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
+    const mongoUri = process.env.MONGODB_URI;
+    
+    if (!mongoUri) {
+      throw new Error('❌ MONGODB_URI is not set in environment variables');
+    }
+
+    console.log('🔌 Connecting to MongoDB...');
+    
+    await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 5000,
+      retryWrites: true,
+      w: 'majority',
     });
+    
     console.log('✅ MongoDB connected successfully');
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error.message);
     process.exit(1);
   }
 }
 
 export async function disconnectDB() {
-  await mongoose.disconnect();
-  console.log('🔌 MongoDB disconnected');
+  try {
+    await mongoose.disconnect();
+    console.log('🔌 MongoDB disconnected');
+  } catch (error) {
+    console.error('❌ MongoDB disconnection error:', error.message);
+  }
 }
